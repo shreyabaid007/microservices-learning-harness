@@ -27,6 +27,8 @@ This isn't a tutorial. It's a harness for practicing how production microservice
 └──────────────────┘                                       └─────────────┘
 ```
 
+> **Full API walkthrough** (register → login → JWT → create/update/delete tasks → DB verification): see [`microtask/README.md`](microtask/README.md)
+
 ## What makes this different
 
 | Practice | How it's enforced |
@@ -36,6 +38,15 @@ This isn't a tutorial. It's a harness for practicing how production microservice
 | **Strict TDD** | Red → Green → Refactor. JaCoCo gates: 80% domain, 70% application |
 | **Real databases in tests** | Testcontainers spins up PostgreSQL — no H2, no mocks for persistence |
 | **AI-in-SDLC** | Steering files lock decisions, hooks run `mvn verify` after every AI turn, specs are the AI's definition of done |
+
+## AI-in-SDLC
+
+How AI was used as a first-class part of the workflow, not just autocomplete:
+
+- **[`.claude/steering/`](microtask/.claude/steering/)** — locked architectural and tech decisions ([product.md](microtask/.claude/steering/product.md), [tech.md](microtask/.claude/steering/tech.md), [structure.md](microtask/.claude/steering/structure.md)) that override default model behavior
+- **[`specs/`](microtask/specs/)** — per-feature acceptance checklists used as the AI's definition of done
+- **[`.claude/hooks/verify-on-stop.sh`](microtask/.claude/hooks/verify-on-stop.sh)** — `Stop` hook that runs `./mvnw verify` whenever the AI ends a turn, so green-build claims are machine-checked
+- **[`ArchitectureTest.java`](microtask/task-service/src/test/java/com/example/task/architecture/ArchitectureTest.java)** — ArchUnit rules that fail the build if generated code drifts from the hexagonal layering
 
 ## Stack
 
@@ -48,6 +59,15 @@ This isn't a tutorial. It's a harness for practicing how production microservice
 | Testing | JUnit 5, Testcontainers, ArchUnit, JaCoCo |
 | Build | Maven (multi-module, Spotless for formatting) |
 | Infra | Docker Compose (2 services + 2 databases) |
+
+## Forbidden (enforced)
+
+| Rule | Detail |
+|---|---|
+| No Lombok outside `@Entity` | Only `@Getter`, `@Setter`, `@NoArgsConstructor` on JPA entities |
+| No field injection | Constructor injection everywhere; `@Autowired` on fields is banned |
+| No H2 | Testcontainers provides real PostgreSQL for every test scope |
+| No shared library | Services don't share a common module; duplication is acceptable |
 
 ## Quickstart
 
@@ -74,6 +94,7 @@ API docs at [localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.ht
 ## Build & test
 
 ```bash
+cd microtask
 ./mvnw verify                        # full: unit + IT + ArchUnit + coverage
 ./mvnw -pl identity-service test     # unit tests only, single module
 ./mvnw spotless:apply                # auto-format (google-java-format)
@@ -83,12 +104,12 @@ API docs at [localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.ht
 
 | Path | Purpose |
 |---|---|
-| `specs/` | Interview transcript + per-service functional specs with acceptance checklists |
-| `identity-service/` | User registration, login, JWT issuance, JWKS endpoint |
-| `task-service/` | Task CRUD, JWT verification, multi-tenant isolation |
-| `.claude/steering/` | Locked architectural decisions — product, tech, structure |
-| `.claude/hooks/` | `verify-on-stop.sh` — runs `mvn verify` after every AI turn |
-| `docker-compose.yml` | Full stack: 2 services + 2 PostgreSQL databases |
+| `microtask/specs/` | Interview transcript + per-service functional specs with acceptance checklists |
+| `microtask/identity-service/` | User registration, login, JWT issuance, JWKS endpoint |
+| `microtask/task-service/` | Task CRUD, JWT verification, multi-tenant isolation |
+| `microtask/.claude/steering/` | Locked architectural decisions — product, tech, structure |
+| `microtask/.claude/hooks/` | `verify-on-stop.sh` — runs `mvn verify` after every AI turn |
+| `microtask/docker-compose.yml` | Full stack: 2 services + 2 PostgreSQL databases |
 
 ## License
 
